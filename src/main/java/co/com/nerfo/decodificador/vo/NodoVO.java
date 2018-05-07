@@ -5,6 +5,7 @@
  */
 package co.com.nerfo.decodificador.vo;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -124,28 +125,29 @@ public class NodoVO {
      * @param maxDistHamming
      * @return
      */
-    public static NodoVO deleteNodoHojaIguales(Boolean delete, NodoVO raiz, Integer maxDistHamming) {
-        Boolean deleteAct = delete;
+    public static NodoVO deleteNodoHojaIguales(AtomicBoolean delete, NodoVO raiz, Integer maxDistHamming) {
         if (raiz != null) {
             if (isHoja(raiz.getNext0())) {
                 if (raiz.getNext0().getDistHamming().equals(maxDistHamming)) {
-                    if (deleteAct) {
+                    if (delete.get()) {
                         raiz.setNext0(null);
                     } else {
-                        deleteAct = Boolean.TRUE;
+                        delete.set(true);
                     }
                 }
             } else {
-                raiz.setNext0(deleteNodoHojaIguales(deleteAct, raiz.getNext0(), maxDistHamming));
+                raiz.setNext0(deleteNodoHojaIguales(delete, raiz.getNext0(), maxDistHamming));
             }
             if (isHoja(raiz.getNext1())) {
-                if (raiz.getNext1().getDistHamming() > maxDistHamming) {
-                    if (deleteAct) {
+                if (raiz.getNext1().getDistHamming().equals(maxDistHamming)) {
+                    if (delete.get()) {
                         raiz.setNext1(null);
+                    } else {
+                        delete.set(true);
                     }
                 }
             } else {
-                raiz.setNext1(deleteNodoHojaIguales(deleteAct, raiz.getNext1(), maxDistHamming));
+                raiz.setNext1(deleteNodoHojaIguales(delete, raiz.getNext1(), maxDistHamming));
             }
         }
         return raiz;

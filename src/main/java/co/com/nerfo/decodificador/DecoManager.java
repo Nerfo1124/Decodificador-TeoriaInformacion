@@ -8,9 +8,11 @@ package co.com.nerfo.decodificador;
 import co.com.nerfo.decodificador.vo.MachineStatesVO;
 import co.com.nerfo.decodificador.vo.NodoVO;
 import co.com.nerfo.decodificador.vo.StatesVO;
+import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.log4j.Logger;
 
@@ -40,11 +42,19 @@ public class DecoManager {
         try {
             MachineStatesVO machine = gson.fromJson(machineJson, MachineStatesVO.class);
             List<String> codWordList = getListCodWord(machine, wordCod);
-            NodoVO arbol = algorithmViterbi(machine, codWordList);
-            // Se ejecuta proceso de decodificacion
-            response = decodeViterbi(arbol);
-            response = validateBinary(response);
-            response = convertBinaryStringToString(response);
+            logger.info("[decodificarPalabra] Tamaño de la palabra codificada: " + codWordList.size());
+            List<List<String>> charList = Lists.partition(codWordList, 8);
+            logger.info("[decodificarPalabra] Numero de caracteres: " + charList.size());
+            for (List<String> list : charList) {
+                String aux = "";
+                NodoVO arbol = algorithmViterbi(machine, list);
+                // Se ejecuta proceso de decodificacion
+                aux = decodeViterbi(arbol);
+                logger.info("Caracter decodificado binario: " + aux);
+                aux = validateBinary(aux);
+                aux = convertBinaryStringToString(aux);
+                response += aux;
+            }
         } catch (Exception ex) {
             logger.error("Error durante la decodificacion del mensaje: " + ex.getMessage(), ex);
         }
@@ -70,21 +80,24 @@ public class DecoManager {
         for (String codRec : codWord) {
             response = algorithmViterbi(response, machine, codRec);
             NodoVO.contNodosHoja(response, countHojas);
-            logger.info("[algorithmViterbi] Hojas: " + countHojas);
+//            logger.info("[algorithmViterbi] Hojas: " + countHojas);
             Integer maxDistHamming = ERROR_PERMITIDO;
             if (countHojas.get() > 4) {
                 response = NodoVO.deleteNodoHoja(response, maxDistHamming);
                 countHojas.set(0);
                 NodoVO.contNodosHoja(response, countHojas);
                 if (countHojas.get() > 4) {
-                    response = NodoVO.deleteNodoHojaIguales(Boolean.FALSE, response, maxDistHamming);
+                    for (int i = maxDistHamming; i > -1; i--) {
+                        AtomicBoolean delete = new AtomicBoolean(false);
+                        response = NodoVO.deleteNodoHojaIguales(delete, response, i);
+                    }
                 }
                 countHojas.set(0);
                 NodoVO.contNodosHoja(response, countHojas);
             }
             countHojas.set(0);
             NodoVO.contNodosHoja(response, countHojas);
-            logger.info("[algorithmViterbi] Nuevo Conteo Hojas: " + countHojas);
+//            logger.info("[algorithmViterbi] Nuevo Conteo Hojas: " + countHojas);
             countHojas.set(0);
         }
         return response;
@@ -180,33 +193,43 @@ public class DecoManager {
      */
     public String decodeViterbi(NodoVO arbol) throws Exception {
         String response = "";
-        while (arbol.getNext0() != null && arbol.getNext1() != null) {
+        while (arbol.getNext0() != null || arbol.getNext1() != null) {
             // Evaluacion si los pesos de hamming de los dos nodo hoja son iguales.
-            if (arbol.getNext0().getDistHamming().equals(arbol.getNext1().getDistHamming())) {
-                List<Integer> pesos = new ArrayList<>();
-                Integer minor1 = arbol.getNext0().getNext0() != null ? arbol.getNext0().getNext0().getDistHamming() : 100;
-                pesos.add(minor1);
-                Integer minor2 = arbol.getNext0().getNext1() != null ? arbol.getNext0().getNext1().getDistHamming() : 100;
-                pesos.add(minor2);
-                Integer minor3 = arbol.getNext1().getNext0() != null ? arbol.getNext1().getNext0().getDistHamming() : 100;
-                pesos.add(minor3);
-                Integer minor4 = arbol.getNext1().getNext1() != null ? arbol.getNext1().getNext1().getDistHamming() : 100;
-                pesos.add(minor4);
-                Integer minor = getMinorValue(pesos);
-                if (minor.equals(minor1) || minor.equals(minor2)) {
+            if (arbol.getNext0() != null && arbol.getNext1() != null) {
+                if (arbol.getNext0().getDistHamming().equals(arbol.getNext1().getDistHamming())) {
+                    List<Integer> pesos = new ArrayList<>();
+                    Integer minor1 = arbol.getNext0().getNext0() != null ? arbol.getNext0().getNext0().getDistHamming() : 100;
+                    pesos.add(minor1);
+                    Integer minor2 = arbol.getNext0().getNext1() != null ? arbol.getNext0().getNext1().getDistHamming() : 100;
+                    pesos.add(minor2);
+                    Integer minor3 = arbol.getNext1().getNext0() != null ? arbol.getNext1().getNext0().getDistHamming() : 100;
+                    pesos.add(minor3);
+                    Integer minor4 = arbol.getNext1().getNext1() != null ? arbol.getNext1().getNext1().getDistHamming() : 100;
+                    pesos.add(minor4);
+                    Integer minor = getMinorValue(pesos);
+                    if (minor.equals(minor1) || minor.equals(minor2)) {
+                        response += arbol.getNext0().getValueCod();
+                        arbol = arbol.getNext0();
+                    } else if (minor.equals(minor3) || minor.equals(minor4)) {
+                        response += arbol.getNext1().getValueCod();
+                        arbol = arbol.getNext1();
+                    }
+                } // Evaluacion de la distancia de hamming si es mayor la rama izquierda con respecto a la rama derecha
+                else if (arbol.getNext0().getDistHamming() < arbol.getNext1().getDistHamming()) {
                     response += arbol.getNext0().getValueCod();
                     arbol = arbol.getNext0();
-                } else if (minor.equals(minor3) || minor.equals(minor4)) {
+                } else {
                     response += arbol.getNext1().getValueCod();
                     arbol = arbol.getNext1();
                 }
-            } // Evaluacion de la distancia de hamming si es mayor la rama izquierda con respecto a la rama derecha
-            else if (arbol.getNext0().getDistHamming() < arbol.getNext1().getDistHamming()) {
-                response += arbol.getNext0().getValueCod();
-                arbol = arbol.getNext0();
             } else {
-                response += arbol.getNext1().getValueCod();
-                arbol = arbol.getNext1();
+                if (arbol.getNext0() != null) {
+                    response += arbol.getNext0().getValueCod();
+                    arbol = arbol.getNext0();
+                } else if (arbol.getNext1() != null) {
+                    response += arbol.getNext1().getValueCod();
+                    arbol = arbol.getNext1();
+                }
             }
         }
         return response;

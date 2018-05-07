@@ -40,14 +40,14 @@ public class CodeManager {
                 machine.addEstado(new StatesVO("S" + i, Integer.toBinaryString(i)));
             }
         }
-        
+
         Integer[] entrada = {0, 1};
         machine.getEstados().forEach((estado) -> {
             for (Integer in : entrada) {
                 estado.getSalidas(in);
             }
         });
-        
+
         return gson.toJson(machine);
     }
 
@@ -62,40 +62,52 @@ public class CodeManager {
     public List<String> codificarPalabra(String machineJson, String palabra) {
         List<String> response = new ArrayList<>();
         MachineStatesVO machine = gson.fromJson(machineJson, MachineStatesVO.class);
-        String palabraBinario = wordToBinary(palabra);
-        System.out.println("Palabra en Binario: " + palabraBinario);
-        
+//        String palabraBinario = wordToBinary(palabra);
+        List<String> palabraBinario = new ArrayList<>();
+        for (char caracter : palabra.toCharArray()) {
+            logger.info("[codificarPalabra] Caracter a codificar: " + caracter);
+            palabraBinario.add(wordToBinary("" + caracter));
+        }
+        System.out.println("[codificarPalabra] Palabra en Binario: " + palabraBinario);
+
         Integer numMemorias = 0;
         for (String operacion : machine.getOperaciones()) {
             numMemorias = getNumMemoriasByOperation(numMemorias, operacion);
         }
 
-        // Creacion de un array con los bits a codificar
-        char[] bin = palabraBinario.toCharArray();
-        // Codificacion de la palabra
+        String palBinario = "";
         String codificacion = "";
         String printEstados = "";
-        String estInicial = String.format("%0" + (numMemorias) + "d", 0);
-        for (char c : bin) {
-            Integer input = Integer.parseInt("" + c);
-            for (StatesVO estado : machine.getEstados()) {
-                if (estado.valuesToString().equals(estInicial)) {
-                    printEstados += estado.getName() + ",";
-                    codificacion += estado.salidasToString(input);
-                    estInicial = estado.nextValues(input);
-                    break;
+        // Creacion de un array con los bits a codificar
+        for (String caracter : palabraBinario) {
+            String codAux = "";
+            String estAux = "";
+            char[] bin = caracter.toCharArray();
+            // Codificacion de la palabra
+            String estInicial = String.format("%0" + (numMemorias) + "d", 0);
+            for (char c : bin) {
+                Integer input = Integer.parseInt("" + c);
+                for (StatesVO estado : machine.getEstados()) {
+                    if (estado.valuesToString().equals(estInicial)) {
+                        estAux += estado.getName() + ",";
+                        codAux += estado.salidasToString(input);
+                        estInicial = estado.nextValues(input);
+                        break;
+                    }
                 }
             }
+            estAux += machine.getNameState(estInicial);
+            List<String> secComplete = null;
+//            if (!machine.getNameState(estInicial).equals(machine.getEstados().get(0).getName())) {
+//                logger.info("La secuencia de codificacion no finalizo en el estado inicial, se inicia ejecucion del metodo encargado de completar la secuencia de bits.");
+//                secComplete = secuenciaTerminacion(machine, machine.getNameState(estInicial));
+//            }
+            printEstados += estAux + "-";
+            codificacion += codAux;
         }
-        printEstados += machine.getNameState(estInicial);
-        List<String> secComplete = null;
-//        if (!machine.getNameState(estInicial).equals(machine.getEstados().get(0).getName())) {
-//            logger.info("La secuencia de codificacion no finalizo en el estado inicial, se inicia ejecucion del metodo encargado de completar la secuencia de bits.");
-//            secComplete = secuenciaTerminacion(machine, machine.getNameState(estInicial));
-//        }
-        response.add(palabraBinario + (secComplete != null ? secComplete.get(0) : ""));
-        response.add(printEstados + (secComplete != null ? secComplete.get(1) : ""));
-        response.add(codificacion + (secComplete != null ? secComplete.get(2) : ""));
+        response.add(palBinario);
+        response.add(printEstados);
+        response.add(codificacion);
         return response;
     }
 
@@ -109,6 +121,8 @@ public class CodeManager {
         String response = "";
         char[] array = word.toCharArray();
         for (char c : array) {
+            logger.info("Char : " + c);
+            logger.info("Valor en Binario:  " + Integer.toBinaryString(c));
             response += validateBinary(Integer.toBinaryString(c));
         }
         return response;
@@ -204,7 +218,7 @@ public class CodeManager {
             return st2;
         }
     }
-    
+
     /**
      * Metodo encargado de validar los 8 bits de un caracter de una palabra.
      *
