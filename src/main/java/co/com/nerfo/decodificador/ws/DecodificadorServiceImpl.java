@@ -9,6 +9,7 @@ import co.com.nerfo.decodificador.DecoManager;
 import javax.jws.WebService;
 import javax.jws.WebMethod;
 import javax.jws.WebParam;
+import org.apache.log4j.Logger;
 
 /**
  *
@@ -17,6 +18,7 @@ import javax.jws.WebParam;
 @WebService(serviceName = "DecodificadorService")
 public class DecodificadorServiceImpl implements IDecodificadorService {
 
+    private static final Logger logger = Logger.getLogger(DecodificadorServiceImpl.class);
     private DecoManager manager;
     
     public DecodificadorServiceImpl() {
@@ -36,7 +38,9 @@ public class DecodificadorServiceImpl implements IDecodificadorService {
                                 @WebParam(name = "msgCod") String msgCod) throws Exception {
         String response = null;
         try {
+            logger.info("============= INICIO - decodeMessage ================");
             response = manager.decodificarPalabra(machineStates, msgCod);
+            logger.info("============= FIN    - decodeMessage ================");
             return response;
         } catch (Throwable ex) {
             throw new Exception("Ocurrion un error durante la decodificacion.", ex);

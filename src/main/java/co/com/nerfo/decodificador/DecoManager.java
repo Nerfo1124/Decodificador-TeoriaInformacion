@@ -70,7 +70,7 @@ public class DecoManager {
         for (String codRec : codWord) {
             response = algorithmViterbi(response, machine, codRec);
             NodoVO.contNodosHoja(response, countHojas);
-            System.out.println("Hojas: " + countHojas);
+            logger.info("[algorithmViterbi] Hojas: " + countHojas);
             Integer maxDistHamming = ERROR_PERMITIDO;
             if (countHojas.get() > 4) {
                 response = NodoVO.deleteNodoHoja(response, maxDistHamming);
@@ -84,7 +84,7 @@ public class DecoManager {
             }
             countHojas.set(0);
             NodoVO.contNodosHoja(response, countHojas);
-            System.out.println("Nuevo Conteo Hojas: " + countHojas);
+            logger.info("[algorithmViterbi] Nuevo Conteo Hojas: " + countHojas);
             countHojas.set(0);
         }
         return response;
@@ -229,6 +229,12 @@ public class DecoManager {
         return minor;
     }
 
+    /**
+     * Metodo encargado de validar los 8 bits de un caracter de una palabra.
+     *
+     * @param binario
+     * @return
+     */
     public static String validateBinary(String binario) {
         if (binario.length() == 8) {
             return binario;

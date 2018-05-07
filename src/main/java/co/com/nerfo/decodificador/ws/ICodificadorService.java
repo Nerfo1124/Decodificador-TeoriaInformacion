@@ -5,12 +5,14 @@
  */
 package co.com.nerfo.decodificador.ws;
 
+import java.util.List;
+
 /**
  *
  * @author Fernando
  */
 public interface ICodificadorService {
     
-    String getMachineStates(String machineStates, String msgCod) throws Exception;
+    String getMachineStates(List<String> operaciones) throws Exception;
     String codeMessage(String machineStates, String msg) throws Exception;
 }
