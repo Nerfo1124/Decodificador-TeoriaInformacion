@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<log4j:configuration debug="true" xmlns:log4j="http://jakarta.apache.org/log4j/">
+    <appender name="archivoFecha" class="org.apache.log4j.DailyRollingFileAppender">        
+        <param name="File" value="/var/log/tomcatB/TeoriaInformacion.log"/>
+        <param name="DatePattern" value="'.'yyyy-MM-dd"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d [%t] %-5p %c - %m%n"/>
+        </layout>
+    </appender>
+    <category name="co.com.nerfo">
+        <priority value="INFO"/>
+        <appender-ref ref="archivoFecha"/>
+    </category>
+</log4j:configuration>
+
